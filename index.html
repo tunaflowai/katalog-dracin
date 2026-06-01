@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Katalog Dracin Premium</title>
+    <!-- Telegram SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Tailwind CSS (CDN for fast prototyping) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body { background-color: #0b0c10; color: #c5c6c7; font-family: 'Inter', sans-serif; }
+      .custom-scroll::-webkit-scrollbar { display: none; }
+      /* Animasi loading sederhana */
+      .loader { border-top-color: #a855f7; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+      @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body class="p-4 antialiased custom-scroll">
+
+    <!-- Bagian Header -->
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 tracking-wide">Dunia Dracin</h1>
+        <p class="text-xs text-gray-500 mt-0.5">Streaming Premium</p>
+      </div>
+      <div class="flex flex-col items-end">
+        <div id="badge-nama" class="text-sm font-bold text-white mb-1">Guest</div>
+        <div id="badge-status" class="bg-gray-800 border border-gray-600 text-gray-400 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+          Mengecek...
+        </div>
+      </div>
+    </div>
+
+    <!-- Kolom Pencarian -->
+    <div class="mb-6">
+      <input type="text" id="cari-input" oninput="filterFilm()" placeholder="Cari judul series..." class="w-full bg-[#1f2833] text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 shadow-inner">
+    </div>
+
+    <!-- Area Loading -->
+    <div id="loading-area" class="flex flex-col items-center justify-center py-10 space-y-3">
+      <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-700 h-10 w-10"></div>
+      <p class="text-sm text-gray-500">Mengambil data film dari server...</p>
+    </div>
+
+    <!-- Area Katalog Film -->
+    <div class="mb-3 flex justify-between items-center hidden" id="header-katalog">
+      <h2 class="text-sm font-bold uppercase tracking-widest text-gray-400">Daftar Series</h2>
+      <span id="total-item" class="text-xs text-gray-500">0 Film</span>
+    </div>
+    <div id="grid-film" class="grid grid-cols-2 gap-4"></div>
+
+    <!-- Modal Paywall (Untuk Member Non-VIP) -->
+    <div id="paywall-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden flex-col justify-end">
+      <div class="bg-[#1f2833] rounded-t-3xl p-6 shadow-2xl border-t border-gray-800 pb-10 transform transition-transform">
+        <h3 class="text-xl font-bold text-white mb-2">Akses Premium 👑</h3>
+        <p class="text-sm text-gray-400 mb-6 line-clamp-3">Film ini khusus untuk Member VIP. Berlangganan sekarang hanya Rp 70.000/bulan untuk menikmati semua drama tanpa batas.</p>
+        <button onclick="bukaFormPembayaran()" class="w-full bg-gradient-to-r from-amber-500 to-yellow-600 text-black font-extrabold py-3.5 rounded-xl shadow-lg mb-3 hover:scale-[1.02] transition-transform">
+          Langganan Rp 70.000
+        </button>
+        <button onclick="tutupModal()" class="w-full bg-gray-800 text-gray-300 font-bold py-3.5 rounded-xl hover:bg-gray-700 transition-colors">
+          Nanti Saja
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Form Pembayaran (BARU) -->
+    <div id="payment-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden flex-col justify-end">
+      <div class="bg-[#1f2833] rounded-t-3xl p-6 shadow-2xl border-t border-gray-800 pb-10">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold text-white">Konfirmasi Transfer</h3>
+          <button onclick="tutupFormPembayaran()" class="text-gray-400 hover:text-white font-bold text-3xl leading-none">&times;</button>
+        </div>
+        
+        <!-- Info Rekening -->
+        <div class="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700 text-center">
+          <p class="text-xs text-gray-400 mb-1">Silakan transfer Rp 70.000 ke rekening:</p>
+          <p class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-500 tracking-wider">BCA - 1234567890</p>
+          <p class="text-sm text-gray-300 mt-1">a.n. Nama Anda Di Sini</p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-400 mb-1">Nama Pengirim (Sesuai Rekening)</label>
+            <input type="text" id="nama-pengirim" placeholder="Misal: Budi Setiawan" class="w-full bg-[#171e26] text-white border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-400 mb-1">Upload Bukti Transfer</label>
+            <input type="file" id="file-bukti" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-purple-900 file:text-purple-300 hover:file:bg-purple-800">
+          </div>
+        </div>
+
+        <button id="btn-submit-bayar" onclick="submitPembayaran()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-extrabold py-3.5 rounded-xl shadow-lg mt-6 hover:scale-[1.02] transition-transform">
+          Kirim Bukti Pembayaran
+        </button>
+      </div>
+    </div>
+
+    <script>
+      // URL Web App GAS Anda
+      const API_GAS_URL = "https://script.google.com/macros/s/AKfycbyNO7Uv5niCsaAIGPTmwvJXWsu-bQIkjFO12lKBch83YHK5pU-twN-DJAGjy0ZdG3Y/exec"; 
+      
+      const tg = window.Telegram.WebApp;
+      tg.expand();
+
+      let masterDataFilm = [];
+      let telegramUser = {
+        id: "12345", 
+        username: "Guest",
+        first_name: "Tamu"
+      };
+
+      if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        telegramUser = tg.initDataUnsafe.user;
+        document.getElementById('badge-nama').innerText = telegramUser.first_name;
+      }
+
+      async function loadKatalog() {
+        try {
+          const response = await fetch(`${API_GAS_URL}?action=getCatalog`);
+          const data = await response.json();
+          masterDataFilm = data;
+          
+          document.getElementById('loading-area').classList.add('hidden');
+          document.getElementById('header-katalog').classList.remove('hidden');
+          document.getElementById('badge-status').innerText = 'TERKONEKSI';
+          tampilkanKatalog(masterDataFilm);
+        } catch (error) {
+          document.getElementById('loading-area').innerHTML = `<p class="text-red-400 text-sm">Gagal memuat katalog. Periksa koneksi.</p>`;
+        }
+      }
+
+      function tampilkanKatalog(listFilm) {
+        const gridContainer = document.getElementById('grid-film');
+        gridContainer.innerHTML = '';
+        document.getElementById('total-item').innerText = `${listFilm.length} Film`;
+
+        if (listFilm.length === 0) {
+          gridContainer.innerHTML = `<div class="col-span-2 text-center text-gray-600 text-sm py-10">Film tidak ditemukan 🔍</div>`;
+          return;
+        }
+
+        listFilm.forEach(film => {
+          const badgeWarna = film.status.toLowerCase() === 'premium' ? 'from-amber-500 to-yellow-600 text-black' : 'from-blue-500 to-indigo-600 text-white';
+          
+          const cardHtml = `
+            <div class="bg-[#1f2833]/60 border border-gray-800 rounded-2xl overflow-hidden flex flex-col transition-transform hover:scale-[1.02]">
+              <div class="relative aspect-[3/4] bg-gray-900 w-full">
+                <img src="${film.cover}" loading="lazy" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/300x400/1f2833/a5b4fc?text=No+Cover'">
+                <span class="absolute top-2 left-2 bg-gradient-to-r ${badgeWarna} text-[9px] font-black px-2 py-0.5 rounded-md uppercase shadow-md">
+                  ${film.status}
+                </span>
+              </div>
+              <div class="p-3 flex flex-col flex-grow justify-between">
+                <h3 class="font-bold text-xs text-white line-clamp-2 min-h-[2rem] mb-3">${film.judul}</h3>
+                <button id="btn-${film.id}" onclick="requestTonton('${film.id}', '${film.status}')" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-extrabold text-xs py-2.5 rounded-xl shadow-lg active:scale-95 transition-all">
+                  ▶ Tonton
+                </button>
+              </div>
+            </div>
+          `;
+          gridContainer.insertAdjacentHTML('beforeend', cardHtml);
+        });
+      }
+
+      function filterFilm() {
+        const keyword = document.getElementById('cari-input').value.toLowerCase();
+        const hasilFilter = masterDataFilm.filter(f => f.judul.toLowerCase().includes(keyword));
+        tampilkanKatalog(hasilFilter);
+      }
+
+      async function requestTonton(videoId, statusFilm) {
+        const btn = document.getElementById(`btn-${videoId}`);
+        btn.disabled = true;
+        btn.innerText = "⏳ Loading...";
+        
+        const urlRequest = `${API_GAS_URL}?action=tonton&videoId=${videoId}&userId=${telegramUser.id}&username=${telegramUser.username || ''}&namaUser=${encodeURIComponent(telegramUser.first_name || '')}`;
+
+        try {
+          const response = await fetch(urlRequest);
+          const result = await response.json();
+
+          if (result.success) {
+            tg.close(); 
+          } else {
+            if (result.isVIP === false) {
+              tampilkanModalPaywall();
+            } else {
+              alert("Error: " + result.message);
+            }
+            btn.disabled = false;
+            btn.innerText = "▶ Tonton";
+          }
+        } catch (error) {
+          alert("Terjadi kesalahan server.");
+          btn.disabled = false;
+          btn.innerText = "▶ Tonton";
+        }
+      }
+
+      function tampilkanModalPaywall() {
+        document.getElementById('paywall-modal').classList.remove('hidden');
+        document.getElementById('paywall-modal').classList.add('flex');
+      }
+
+      function tutupModal() {
+        document.getElementById('paywall-modal').classList.add('hidden');
+        document.getElementById('paywall-modal').classList.remove('flex');
+      }
+
+      function bukaFormPembayaran() {
+        tutupModal();
+        document.getElementById('payment-modal').classList.remove('hidden');
+        document.getElementById('payment-modal').classList.add('flex');
+      }
+
+      function tutupFormPembayaran() {
+        document.getElementById('payment-modal').classList.add('hidden');
+        document.getElementById('payment-modal').classList.remove('flex');
+      }
+
+      // Logika mengubah foto jadi Base64 dan kirim ke Apps Script
+      async function submitPembayaran() {
+        const namaPengirim = document.getElementById('nama-pengirim').value;
+        const fileInput = document.getElementById('file-bukti');
+        const btnSubmit = document.getElementById('btn-submit-bayar');
+
+        if (!namaPengirim) return alert("Harap isi nama pengirim!");
+        if (fileInput.files.length === 0) return alert("Harap upload foto bukti transfer!");
+
+        btnSubmit.disabled = true;
+        btnSubmit.innerText = "⏳ Sedang Mengirim...";
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        // Saat foto selesai dibaca menjadi Base64
+        reader.onload = async function(e) {
+          const base64Data = e.target.result.split(',')[1]; // Ambil data raw-nya saja
+          
+          const payload = {
+            action: "uploadBukti",
+            userId: telegramUser.id,
+            username: telegramUser.username,
+            namaUser: telegramUser.first_name,
+            namaRekening: namaPengirim,
+            fileName: file.name,
+            mimeType: file.type,
+            dataBase64: base64Data
+          };
+
+          try {
+            // Kita kirim POST request ke Google Apps Script
+            const response = await fetch(API_GAS_URL, {
+              method: "POST",
+              body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+
+            if (result.success) {
+              alert("✅ Bukti berhasil dikirim! Mohon tunggu konfirmasi admin 1x24 Jam.");
+              tutupFormPembayaran();
+              tg.close(); // Tutup app
+            } else {
+              alert("❌ Gagal: " + result.message);
+            }
+          } catch (err) {
+            alert("Terjadi kesalahan jaringan saat upload.");
+          } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = "Kirim Bukti Pembayaran";
+          }
+        };
+
+        reader.readAsDataURL(file); // Trigger pembacaan file
+      }
+
+      window.onload = loadKatalog;
+    </script>
+  </body>
+</html>
