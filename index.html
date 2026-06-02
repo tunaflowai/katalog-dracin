@@ -4,21 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Katalog Dracin Premium</title>
-    <!-- Telegram SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Tailwind CSS (CDN for fast prototyping) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       body { background-color: #0b0c10; color: #c5c6c7; font-family: 'Inter', sans-serif; }
       .custom-scroll::-webkit-scrollbar { display: none; }
-      /* Animasi loading sederhana */
       .loader { border-top-color: #a855f7; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
       @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 999; animation: fadeInOut 3s ease forwards; }
+      @keyframes fadeInOut { 0%{opacity:0;transform:translateX(-50%) translateY(10px)} 15%{opacity:1;transform:translateX(-50%) translateY(0)} 80%{opacity:1} 100%{opacity:0} }
     </style>
   </head>
   <body class="p-4 antialiased custom-scroll">
 
-    <!-- Bagian Header -->
+    <!-- Header -->
     <div class="flex items-center justify-between mb-5">
       <div>
         <h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 tracking-wide">Dunia Dracin</h1>
@@ -32,31 +31,34 @@
       </div>
     </div>
 
-    <!-- Kolom Pencarian -->
+    <!-- Search -->
     <div class="mb-6">
-      <input type="text" id="cari-input" oninput="filterFilm()" placeholder="Cari judul series..." class="w-full bg-[#1f2833] text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 shadow-inner">
+      <input type="text" id="cari-input" oninput="filterFilm()" placeholder="Cari judul series..." 
+        class="w-full bg-[#1f2833] text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 shadow-inner">
     </div>
 
-    <!-- Area Loading -->
+    <!-- Loading -->
     <div id="loading-area" class="flex flex-col items-center justify-center py-10 space-y-3">
       <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-700 h-10 w-10"></div>
       <p class="text-sm text-gray-500">Mengambil data film dari server...</p>
     </div>
 
-    <!-- Area Katalog Film -->
+    <!-- Header Katalog -->
     <div class="mb-3 flex justify-between items-center hidden" id="header-katalog">
       <h2 class="text-sm font-bold uppercase tracking-widest text-gray-400">Daftar Series</h2>
       <span id="total-item" class="text-xs text-gray-500">0 Film</span>
     </div>
-    <div id="grid-film" class="grid grid-cols-2 gap-4"></div>
 
-    <!-- Modal Paywall (Untuk Member Non-VIP) -->
+    <!-- Grid Film -->
+    <div id="grid-film" class="grid grid-cols-2 gap-4 pb-6"></div>
+
+    <!-- Modal Paywall -->
     <div id="paywall-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden flex-col justify-end">
-      <div class="bg-[#1f2833] rounded-t-3xl p-6 shadow-2xl border-t border-gray-800 pb-10 transform transition-transform">
+      <div class="bg-[#1f2833] rounded-t-3xl p-6 shadow-2xl border-t border-gray-800 pb-10">
         <h3 class="text-xl font-bold text-white mb-2">Akses Premium 👑</h3>
-        <p class="text-sm text-gray-400 mb-6 line-clamp-3">Film ini khusus untuk Member VIP. Berlangganan sekarang hanya Rp 70.000/bulan untuk menikmati semua drama tanpa batas.</p>
+        <p class="text-sm text-gray-400 mb-6">Film ini khusus untuk Member VIP. Berlangganan sekarang hanya <strong class="text-white">Rp 70.000/bulan</strong> untuk menikmati semua drama tanpa batas.</p>
         <button onclick="bukaFormPembayaran()" class="w-full bg-gradient-to-r from-amber-500 to-yellow-600 text-black font-extrabold py-3.5 rounded-xl shadow-lg mb-3 hover:scale-[1.02] transition-transform">
-          Langganan Rp 70.000
+          👑 Langganan Rp 70.000
         </button>
         <button onclick="tutupModal()" class="w-full bg-gray-800 text-gray-300 font-bold py-3.5 rounded-xl hover:bg-gray-700 transition-colors">
           Nanti Saja
@@ -64,7 +66,7 @@
       </div>
     </div>
 
-    <!-- Modal Form Pembayaran -->
+    <!-- Modal Pembayaran -->
     <div id="payment-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden flex-col justify-end">
       <div class="bg-[#1f2833] rounded-t-3xl p-6 shadow-2xl border-t border-gray-800 pb-10">
         <div class="flex justify-between items-center mb-4">
@@ -74,46 +76,75 @@
         
         <!-- Info Rekening -->
         <div class="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700 text-center">
-          <p class="text-xs text-gray-400 mb-1">Silakan transfer Rp 70.000 ke rekening:</p>
+          <p class="text-xs text-gray-400 mb-1">Silakan transfer <strong class="text-white">Rp 70.000</strong> ke rekening:</p>
           <p class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-500 tracking-wider">BCA - 1234567890</p>
           <p class="text-sm text-gray-300 mt-1">a.n. Nama Anda Di Sini</p>
+          <!-- Tombol salin nomor rekening -->
+          <button onclick="salinRekening()" class="mt-2 text-xs text-purple-400 underline">Salin Nomor Rekening</button>
         </div>
 
         <div class="space-y-4">
           <div>
             <label class="block text-xs font-bold text-gray-400 mb-1">Nama Pengirim (Sesuai Rekening)</label>
-            <input type="text" id="nama-pengirim" placeholder="Misal: Budi Setiawan" class="w-full bg-[#171e26] text-white border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500">
+            <input type="text" id="nama-pengirim" placeholder="Misal: Budi Setiawan" 
+              class="w-full bg-[#171e26] text-white border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500">
           </div>
           <div>
             <label class="block text-xs font-bold text-gray-400 mb-1">Upload Bukti Transfer</label>
-            <input type="file" id="file-bukti" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-purple-900 file:text-purple-300 hover:file:bg-purple-800">
+            <input type="file" id="file-bukti" accept="image/*" 
+              class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-purple-900 file:text-purple-300 hover:file:bg-purple-800">
+            <!-- Preview gambar -->
+            <img id="preview-bukti" src="" alt="Preview" class="hidden mt-2 rounded-xl max-h-40 object-cover w-full">
           </div>
         </div>
 
-        <button id="btn-submit-bayar" onclick="submitPembayaran()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-extrabold py-3.5 rounded-xl shadow-lg mt-6 hover:scale-[1.02] transition-transform">
+        <button id="btn-submit-bayar" onclick="submitPembayaran()" 
+          class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-extrabold py-3.5 rounded-xl shadow-lg mt-6 hover:scale-[1.02] transition-transform">
           Kirim Bukti Pembayaran
         </button>
       </div>
     </div>
 
     <script>
-      // ⚠️ GANTI DENGAN URL WEB APP GAS ANDA
-      const API_GAS_URL = "https://script.google.com/macros/s/AKfycbyNO7Uv5niCsaAIGPTmwvJXWsu-bQIkjFO12lKBch83YHK5pU-twN-DJAGjy0ZdG3Y/exec"; 
+      const API_GAS_URL = "https://script.google.com/macros/s/AKfycbyNO7Uv5niCsaAIGPTmwvJXWsu-bQIkjFO12lKBch83YHK5pU-twN-DJAGjy0ZdG3Y/exec";
       
       const tg = window.Telegram.WebApp;
       tg.expand();
 
       let masterDataFilm = [];
-      let telegramUser = {
-        id: "12345", 
-        username: "Guest",
-        first_name: "Tamu"
-      };
+      let statusVIP = false;
+
+      // ✅ PERBAIKAN: Validasi user Telegram dengan benar
+      let telegramUser = null;
 
       if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
         telegramUser = tg.initDataUnsafe.user;
-        document.getElementById('badge-nama').innerText = telegramUser.first_name;
+        document.getElementById('badge-nama').innerText = telegramUser.first_name || "User";
+      } else {
+        // Jika tidak ada data Telegram, tampilkan peringatan
+        document.getElementById('badge-nama').innerText = "Guest";
+        document.getElementById('badge-status').innerText = "Buka via Bot";
+        document.getElementById('badge-status').className = "bg-red-900 border border-red-700 text-red-400 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase";
       }
+
+      // ✅ Preview gambar sebelum upload
+      document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('file-bukti');
+        if (fileInput) {
+          fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = function(e) {
+                const preview = document.getElementById('preview-bukti');
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+        }
+      });
 
       async function loadKatalog() {
         try {
@@ -123,10 +154,38 @@
           
           document.getElementById('loading-area').classList.add('hidden');
           document.getElementById('header-katalog').classList.remove('hidden');
-          document.getElementById('badge-status').innerText = 'TERKONEKSI';
+
+          // ✅ Cek status VIP jika ada user Telegram
+          if (telegramUser) {
+            await cekStatusVIP();
+          }
+
           tampilkanKatalog(masterDataFilm);
         } catch (error) {
-          document.getElementById('loading-area').innerHTML = `<p class="text-red-400 text-sm">Gagal memuat katalog. Periksa koneksi.</p>`;
+          document.getElementById('loading-area').innerHTML = `<p class="text-red-400 text-sm text-center">Gagal memuat katalog.<br>Periksa koneksi internet Anda.</p>`;
+        }
+      }
+
+      // ✅ Fungsi cek status VIP dari server
+      async function cekStatusVIP() {
+        try {
+          const url = `${API_GAS_URL}?action=tonton&videoId=cek_vip&userId=${telegramUser.id}&username=${telegramUser.username || ''}&namaUser=${encodeURIComponent(telegramUser.first_name || '')}`;
+          const response = await fetch(url);
+          const result = await response.json();
+          
+          // Jika isVIP false artinya user sudah terdaftar, kita cek dari respons
+          statusVIP = result.isVIP === true;
+          
+          const badgeStatus = document.getElementById('badge-status');
+          if (statusVIP) {
+            badgeStatus.innerText = "VIP 👑";
+            badgeStatus.className = "bg-amber-900 border border-amber-600 text-amber-400 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase";
+          } else {
+            badgeStatus.innerText = "Regular";
+            badgeStatus.className = "bg-gray-800 border border-gray-600 text-gray-400 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase";
+          }
+        } catch(e) {
+          document.getElementById('badge-status').innerText = "Terkoneksi";
         }
       }
 
@@ -141,19 +200,25 @@
         }
 
         listFilm.forEach(film => {
-          const badgeWarna = film.status.toLowerCase() === 'premium' ? 'from-amber-500 to-yellow-600 text-black' : 'from-blue-500 to-indigo-600 text-white';
+          const isPremium = film.status.toLowerCase() === 'premium';
+          const badgeWarna = isPremium ? 'from-amber-500 to-yellow-600 text-black' : 'from-blue-500 to-indigo-600 text-white';
+          // ✅ Tampilkan ikon gembok jika premium dan user bukan VIP
+          const gembokIcon = isPremium && !statusVIP ? '<span class="absolute top-2 right-2 text-lg">🔒</span>' : '';
           
           const cardHtml = `
             <div class="bg-[#1f2833]/60 border border-gray-800 rounded-2xl overflow-hidden flex flex-col transition-transform hover:scale-[1.02]">
               <div class="relative aspect-[3/4] bg-gray-900 w-full">
-                <img src="${film.cover}" loading="lazy" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/300x400/1f2833/a5b4fc?text=No+Cover'">
+                <img src="${film.cover}" loading="lazy" class="w-full h-full object-cover" 
+                  onerror="this.src='https://placehold.co/300x400/1f2833/a5b4fc?text=No+Cover'">
                 <span class="absolute top-2 left-2 bg-gradient-to-r ${badgeWarna} text-[9px] font-black px-2 py-0.5 rounded-md uppercase shadow-md">
                   ${film.status}
                 </span>
+                ${gembokIcon}
               </div>
               <div class="p-3 flex flex-col flex-grow justify-between">
                 <h3 class="font-bold text-xs text-white line-clamp-2 min-h-[2rem] mb-3">${film.judul}</h3>
-                <button id="btn-${film.id}" onclick="requestTonton('${film.id}', '${film.status}')" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-extrabold text-xs py-2.5 rounded-xl shadow-lg active:scale-95 transition-all">
+                <button id="btn-${film.id}" onclick="requestTonton('${film.id}', '${film.status}')" 
+                  class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-extrabold text-xs py-2.5 rounded-xl shadow-lg active:scale-95 transition-all">
                   ▶ Tonton
                 </button>
               </div>
@@ -170,6 +235,12 @@
       }
 
       async function requestTonton(videoId, statusFilm) {
+        // ✅ Cek apakah dibuka dari Telegram
+        if (!telegramUser) {
+          tampilkanToast("⚠️ Buka melalui bot Telegram!");
+          return;
+        }
+
         const btn = document.getElementById(`btn-${videoId}`);
         btn.disabled = true;
         btn.innerText = "⏳ Loading...";
@@ -181,21 +252,36 @@
           const result = await response.json();
 
           if (result.success) {
-            tg.close(); 
+            // ✅ PERBAIKAN: Jangan close app, tampilkan notifikasi saja
+            tampilkanToast("✅ Video sedang dikirim ke chat Telegram Anda!");
+            tg.showAlert("✅ Video berhasil dikirim!\n\nSilakan cek chat Telegram Anda.", () => {
+              tg.close();
+            });
           } else {
             if (result.isVIP === false) {
               tampilkanModalPaywall();
             } else {
-              alert("Error: " + result.message);
+              tampilkanToast("❌ " + result.message);
             }
-            btn.disabled = false;
-            btn.innerText = "▶ Tonton";
           }
         } catch (error) {
-          alert("Terjadi kesalahan server.");
+          tampilkanToast("❌ Terjadi kesalahan server.");
+        } finally {
           btn.disabled = false;
           btn.innerText = "▶ Tonton";
         }
+      }
+
+      // ✅ Toast notification
+      function tampilkanToast(pesan) {
+        const existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast bg-gray-800 text-white text-sm font-bold px-5 py-3 rounded-full shadow-xl border border-gray-700';
+        toast.innerText = pesan;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
       }
 
       function tampilkanModalPaywall() {
@@ -217,49 +303,55 @@
       function tutupFormPembayaran() {
         document.getElementById('payment-modal').classList.add('hidden');
         document.getElementById('payment-modal').classList.remove('flex');
+        // Reset form
+        document.getElementById('nama-pengirim').value = '';
+        document.getElementById('file-bukti').value = '';
+        document.getElementById('preview-bukti').classList.add('hidden');
       }
 
-      // ⚠️ UPDATE BARU: AUTO COMPRESS IMAGE 
+      // ✅ Salin nomor rekening
+      function salinRekening() {
+        navigator.clipboard.writeText('1234567890').then(() => {
+          tampilkanToast("✅ Nomor rekening disalin!");
+        });
+      }
+
       async function submitPembayaran() {
-        const namaPengirim = document.getElementById('nama-pengirim').value;
+        // ✅ Cek user Telegram
+        if (!telegramUser) {
+          tampilkanToast("⚠️ Buka melalui bot Telegram!");
+          return;
+        }
+
+        const namaPengirim = document.getElementById('nama-pengirim').value.trim();
         const fileInput = document.getElementById('file-bukti');
         const btnSubmit = document.getElementById('btn-submit-bayar');
 
-        if (!namaPengirim) return alert("Harap isi nama pengirim!");
-        if (fileInput.files.length === 0) return alert("Harap upload foto bukti transfer!");
+        if (!namaPengirim) { tampilkanToast("⚠️ Harap isi nama pengirim!"); return; }
+        if (fileInput.files.length === 0) { tampilkanToast("⚠️ Harap upload foto bukti transfer!"); return; }
+
+        // ✅ Konfirmasi sebelum submit
+        const konfirmasi = confirm(`Konfirmasi pengiriman bukti transfer atas nama:\n"${namaPengirim}"\n\nLanjutkan?`);
+        if (!konfirmasi) return;
 
         btnSubmit.disabled = true;
         btnSubmit.innerText = "⏳ Mengompres & Mengirim...";
 
         const file = fileInput.files[0];
-        
-        // Cek jika ukuran asli kurang dari 1MB (tidak perlu kompres berat)
-        const isSmallImage = file.size < 1048576; // 1 MB
-
         const reader = new FileReader();
 
         reader.onload = function(event) {
           const img = new Image();
           img.onload = async function() {
-            // Proses Kompresi dengan HTML5 Canvas
             const canvas = document.createElement('canvas');
-            
-            // Batas maksimal dimensi 1200px (Sangat cukup untuk baca resi)
-            const MAX_WIDTH = 1200;
-            const MAX_HEIGHT = 1200;
+            const MAX_SIZE = 1200;
             let width = img.width;
             let height = img.height;
 
             if (width > height) {
-              if (width > MAX_WIDTH) {
-                height *= MAX_WIDTH / width;
-                width = MAX_WIDTH;
-              }
+              if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
             } else {
-              if (height > MAX_HEIGHT) {
-                width *= MAX_HEIGHT / height;
-                height = MAX_HEIGHT;
-              }
+              if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
             }
 
             canvas.width = width;
@@ -267,24 +359,20 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Ekspor gambar menjadi JPEG dengan kualitas 70% (0.7)
             const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            
-            // Ambil Base64 mentahnya
             const base64Data = compressedDataUrl.split(',')[1]; 
             
             const payload = {
               action: "uploadBukti",
               userId: telegramUser.id,
-              username: telegramUser.username,
-              namaUser: telegramUser.first_name,
+              username: telegramUser.username || '',
+              namaUser: telegramUser.first_name || '',
               namaRekening: namaPengirim,
               fileName: "bukti_kompres.jpg",
               mimeType: "image/jpeg",
               dataBase64: base64Data
             };
 
-            // Kirim ke Google Apps Script
             try {
               const response = await fetch(API_GAS_URL, {
                 method: "POST",
@@ -293,14 +381,15 @@
               const result = await response.json();
 
               if (result.success) {
-                alert("✅ Bukti berhasil dikirim! Mohon tunggu konfirmasi admin.");
                 tutupFormPembayaran();
-                tg.close(); 
+                tg.showAlert("✅ Bukti berhasil dikirim!\n\nMohon tunggu konfirmasi dari admin. Proses biasanya 1x24 jam.", () => {
+                  tg.close();
+                });
               } else {
-                alert("❌ Gagal: " + result.message);
+                tampilkanToast("❌ Gagal: " + result.message);
               }
             } catch (err) {
-              alert("Terjadi kesalahan jaringan saat upload.");
+              tampilkanToast("❌ Kesalahan jaringan saat upload.");
             } finally {
               btnSubmit.disabled = false;
               btnSubmit.innerText = "Kirim Bukti Pembayaran";
@@ -309,7 +398,6 @@
           img.src = event.target.result;
         };
 
-        // Baca file sebagai DataURL (Base64) untuk dimasukkan ke Image()
         reader.readAsDataURL(file);
       }
 
